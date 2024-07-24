@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>靜心水滴計數器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f8ff;
+        }
+        .container {
+            text-align: center;
+        }
+        select, button {
+            padding: 10px;
+            margin: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>靜心水滴計數器</h1>
+        <label for="timeDuration">選擇靜心時間:</label>
+        <select id="timeDuration">
+            <option value="30">半分鐘</option>
+            <option value="60">1分鐘</option>
+            <option value="90">1分半鐘</option>
+            <option value="120">2分鐘</option>
+            <option value="150">2分半鐘</option>
+            <option value="180">3分鐘</option>
+            <option value="custom">自訂時間</option>
+        </select>
+        <input type="number" id="customTime" placeholder="輸入自訂時間(秒)" style="display:none;">
+        <br>
+        <button onclick="startMeditation()">開始靜心</button>
+        <div id="countDisplay"></div>
+        <audio id="waterDropSound" src="water_drop.wav"></audio>
+        <audio id="chimeSound" src="qing.wav"></audio>
+    </div>
+
+    <script>
+        document.getElementById('timeDuration').addEventListener('change', function() {
+            if (this.value === 'custom') {
+                document.getElementById('customTime').style.display = 'inline-block';
+            } else {
+                document.getElementById('customTime').style.display = 'none';
+            }
+        });
+
+        function startMeditation() {
+            let timeDuration = document.getElementById('timeDuration').value;
+            if (timeDuration === 'custom') {
+                timeDuration = parseInt(document.getElementById('customTime').value);
+            } else {
+                timeDuration = parseInt(timeDuration);
+            }
+
+            const waterDropSound = document.getElementById('waterDropSound');
+            const chimeSound = document.getElementById('chimeSound');
+            let count = 0;
+
+            const intervalId = setInterval(() => {
+                waterDropSound.play();
+                count++;
+                document.getElementById('countDisplay').innerText = `播放水滴聲音次數: ${count}`;
+                if (count >= timeDuration / 2) { // Adjusted to play water drops at a moderate rate
+                    clearInterval(intervalId);
+                    setTimeout(() => {
+                        chimeSound.play();
+                    }, 1000); // Wait 1 second after the last water drop sound
+                }
+            }, 2000); // Adjusted interval to 2 seconds for a more spaced-out experience
+        }
+    </script>
+</body>
+</html>
