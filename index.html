@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,7 @@
         body {
             font-family: Arial, sans-serif;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             height: 100vh;
             margin: 0;
@@ -16,16 +16,56 @@
         }
         .container {
             text-align: center;
+            max-width: 1200px;
+            width: 100%;
+            position: relative;
         }
-        select, button {
+        select, button, input {
             padding: 10px;
             margin: 10px;
             font-size: 16px;
+        }
+        .student-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .student-buttons .row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .student-buttons button {
+            padding: 10px;
+            margin: 0 2px; /* Reduced spacing between buttons */
+            font-size: 16px;
+        }
+        .scoreboard {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 20px;
+            font-size: 18px;
+            text-align: center;
+        }
+        .scoreboard div {
+            margin: 5px;
+            padding: 10px;
+            background-color: #d0f0c0; /* 淺綠色背景 */
+            border-radius: 5px;
+            display: inline-block;
+        }
+        #downloadButton {
+            position: absolute;
+            top: 10px;
+            right: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <button id="downloadButton" onclick="downloadScores()">下載分數</button>
         <h1>靜心水滴計數器</h1>
         <label for="timeDuration">選擇靜心時間:</label>
         <select id="timeDuration">
@@ -43,6 +83,11 @@
         <div id="countDisplay"></div>
         <audio id="waterDropSound" src="water_drop.wav"></audio>
         <audio id="chimeSound" src="qing.wav"></audio>
+        <div class="student-buttons" id="studentButtons">
+            <div class="row" id="row1"></div>
+            <div class="row" id="row2"></div>
+        </div>
+        <div class="scoreboard" id="scoreboard"></div>
     </div>
 
     <script>
@@ -64,20 +109,95 @@
 
             const waterDropSound = document.getElementById('waterDropSound');
             const chimeSound = document.getElementById('chimeSound');
+            const startTime = Date.now();
+            const endTime = startTime + timeDuration * 1000; // Calculate end time in milliseconds
             let count = 0;
+            const intervalDuration = 3000; // 3 seconds between sounds
 
-            const intervalId = setInterval(() => {
-                waterDropSound.play();
-                count++;
-                document.getElementById('countDisplay').innerText = `播放水滴聲音次數: ${count}`;
-                if (count >= timeDuration / 2) { // Adjusted to play water drops at a moderate rate
-                    clearInterval(intervalId);
-                    setTimeout(() => {
-                        chimeSound.play();
-                    }, 1000); // Wait 1 second after the last water drop sound
+            function playSound() {
+                return new Promise((resolve) => {
+                    waterDropSound.onended = resolve;
+                    waterDropSound.play();
+                });
+            }
+
+            async function playSounds() {
+                while (Date.now() < endTime) {
+                    await playSound();
+                    count++;
+                    document.getElementById('countDisplay').innerText = `播放水滴聲音次數: ${count}`;
+                    if (Date.now() >= endTime) {
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second interval between sounds
                 }
-            }, 2000); // Adjusted interval to 2 seconds for a more spaced-out experience
+                chimeSound.play();
+            }
+
+            playSounds();
         }
+
+        const students = Array.from({ length: 31 }, (_, i) => {
+            const number = i + 1;
+            return number === 26 || number === 30 ? null : { number, score: 0 };
+        }).filter(student => student !== null);
+
+        function renderStudentButtons() {
+            const row1 = document.getElementById('row1');
+            const row2 = document.getElementById('row2');
+            row1.innerHTML = '';
+            row2.innerHTML = '';
+
+            students.forEach(student => {
+                if (student.number <= 15) {
+                    row1.innerHTML += `<button onclick="showAndAddScore(${student.number})">${student.number}</button>`;
+                } else {
+                    row2.innerHTML += `<button onclick="showAndAddScore(${student.number})">${student.number}</button>`;
+                }
+            });
+        }
+
+        function showAndAddScore(studentNumber) {
+            const student = students.find(s => s.number === studentNumber);
+            if (student) {
+                student.score++;
+                updateScoreboard();
+            }
+        }
+
+        function updateScoreboard() {
+            const scoreboard = document.getElementById('scoreboard');
+            scoreboard.innerHTML = '';
+            const sortedStudents = students
+                .filter(student => student.score > 0)
+                .sort((a, b) => a.number - b.number);
+
+            sortedStudents.forEach(student => {
+                const scoreDiv = document.createElement('div');
+                scoreDiv.id = `student-${student.number}`;
+                scoreDiv.innerText = `座號: ${student.number} | 分數: ${student.score}`;
+                scoreboard.appendChild(scoreDiv);
+            });
+        }
+
+        function downloadScores() {
+            const rows = [
+                ['座號', '分數'],
+                ...students.map(student => [student.number, student.score])
+            ];
+            let csvContent = "data:text/csv;charset=utf-8,"
+                + rows.map(e => e.join(",")).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "student_scores.csv");
+            document.body.appendChild(link);
+
+            link.click();
+        }
+
+        renderStudentButtons();
     </script>
 </body>
 </html>
