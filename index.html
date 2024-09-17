@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>靜心水滴計數器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -31,8 +32,8 @@
         }
         .student-buttons {
             display: flex;
-            flex-wrap: wrap; /* Allow wrapping to fit buttons in a single row */
-            justify-content: center; /* Center align buttons */
+            flex-wrap: wrap;
+            justify-content: center;
             margin-top: 10px;
         }
         .student-buttons button {
@@ -91,13 +92,11 @@
             <option value="custom">自訂時間</option>
         </select>
         <input type="number" id="customTime" placeholder="輸入自訂時間(秒)" style="display:none;">
-        <button onclick="startMeditation()">開始靜心</button> <!-- Move button to the right -->
+        <button onclick="startMeditation()">開始靜心</button>
         <div id="countDisplay"></div>
         <audio id="waterDropSound" src="water_drop.wav"></audio>
         <audio id="chimeSound" src="qing.wav"></audio>
-        <div class="student-buttons" id="studentButtons">
-            <!-- Render all student buttons in one row -->
-        </div>
+        <div class="student-buttons" id="studentButtons"></div>
         <div class="scoreboard" id="scoreboard"></div>
     </div>
 
@@ -201,24 +200,21 @@
         }
 
         function downloadScores() {
-            const rows = [
-                ['座號', '得分'], // Updated header names
+            const wb = XLSX.utils.book_new();
+            const wsData = [
+                ['座號', '得分'], // Header
                 ...Array.from({ length: 35 }, (_, i) => {
                     const number = i + 1;
                     const student = students.find(s => s.number === number) || { number, score: 0 };
                     return [student.number, student.score];
                 })
             ];
-            let csvContent = "data:text/csv;charset=utf-8," 
-                + rows.map(e => e.join(",")).join("\n");
 
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "student_scores.csv");
-            document.body.appendChild(link);
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            XLSX.utils.book_append_sheet(wb, ws, "學生得分");
 
-            link.click();
+            // Download the Excel file
+            XLSX.writeFile(wb, "student_scores.xlsx");
         }
 
         renderStudentButtons();
