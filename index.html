@@ -21,45 +21,58 @@
             position: relative;
         }
         select, button, input {
-            padding: 10px;
-            margin: 10px;
-            font-size: 16px;
+            padding: 5px;
+            margin: 5px;
+            font-size: 12px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
         }
         .student-buttons {
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-top: 20px;
-        }
-        .student-buttons .row {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 10px;
+            flex-wrap: wrap; /* Allow wrapping to fit buttons in a single row */
+            justify-content: center; /* Center align buttons */
+            margin-top: 10px;
         }
         .student-buttons button {
-            padding: 10px;
-            margin: 0 2px; /* Reduced spacing between buttons */
-            font-size: 16px;
+            padding: 5px;
+            margin: 0 2px;
+            font-size: 12px;
         }
         .scoreboard {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            margin-top: 20px;
-            font-size: 18px;
+            margin-top: 10px;
+            font-size: 16px;
             text-align: center;
+            max-height: 65vh;
+            overflow-y: auto;
         }
         .scoreboard div {
-            margin: 5px;
-            padding: 10px;
-            background-color: #d0f0c0; /* 淺綠色背景 */
+            margin: 3px;
+            padding: 5px;
+            background-color: #d0f0c0;
             border-radius: 5px;
             display: inline-block;
+            min-width: 100px;
+            max-width: 120px;
+            font-size: 14px;
         }
         #downloadButton {
             position: absolute;
             top: 10px;
             right: 10px;
+            font-size: 12px;
+        }
+        .score-control {
+            margin-top: 5px;
+        }
+        .score-control button {
+            font-size: 10px;
+            padding: 3px;
+            margin: 0 2px;
         }
     </style>
 </head>
@@ -78,14 +91,12 @@
             <option value="custom">自訂時間</option>
         </select>
         <input type="number" id="customTime" placeholder="輸入自訂時間(秒)" style="display:none;">
-        <br>
-        <button onclick="startMeditation()">開始靜心</button>
+        <button onclick="startMeditation()">開始靜心</button> <!-- Move button to the right -->
         <div id="countDisplay"></div>
         <audio id="waterDropSound" src="water_drop.wav"></audio>
         <audio id="chimeSound" src="qing.wav"></audio>
         <div class="student-buttons" id="studentButtons">
-            <div class="row" id="row1"></div>
-            <div class="row" id="row2"></div>
+            <!-- Render all student buttons in one row -->
         </div>
         <div class="scoreboard" id="scoreboard"></div>
     </div>
@@ -109,8 +120,9 @@
 
             const waterDropSound = document.getElementById('waterDropSound');
             const chimeSound = document.getElementById('chimeSound');
+            chimeSound.volume = 1.0;
             const startTime = Date.now();
-            const endTime = startTime + timeDuration * 1000; // Calculate end time in milliseconds
+            const endTime = startTime + timeDuration * 1000;
             let count = 0;
 
             function playSound() {
@@ -128,7 +140,7 @@
                     if (Date.now() >= endTime) {
                         break;
                     }
-                    await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second interval between sounds
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
                 chimeSound.play();
             }
@@ -138,22 +150,15 @@
 
         const students = Array.from({ length: 35 }, (_, i) => {
             const number = i + 1;
-            // Include all numbers except 26 and 30
-            return number === 26 || number === 30 ? { number, score: 0 } : { number, score: 0 };
+            return { number, score: 0 };
         });
 
         function renderStudentButtons() {
-            const row1 = document.getElementById('row1');
-            const row2 = document.getElementById('row2');
-            row1.innerHTML = '';
-            row2.innerHTML = '';
+            const studentButtons = document.getElementById('studentButtons');
+            studentButtons.innerHTML = '';
 
             students.forEach(student => {
-                if (student.number <= 16) { // First 16 students in row1
-                    row1.innerHTML += `<button onclick="showAndAddScore(${student.number})">${student.number}</button>`;
-                } else { // Rest in row2
-                    row2.innerHTML += `<button onclick="showAndAddScore(${student.number})">${student.number}</button>`;
-                }
+                studentButtons.innerHTML += `<button onclick="showAndAddScore(${student.number})">${student.number}</button>`;
             });
         }
 
@@ -161,6 +166,15 @@
             const student = students.find(s => s.number === studentNumber);
             if (student) {
                 student.score++;
+                updateScoreboard();
+            }
+        }
+
+        function adjustScore(studentNumber, increment) {
+            const student = students.find(s => s.number === studentNumber);
+            if (student) {
+                student.score += increment;
+                if (student.score < 0) student.score = 0;
                 updateScoreboard();
             }
         }
@@ -175,21 +189,27 @@
             sortedStudents.forEach(student => {
                 const scoreDiv = document.createElement('div');
                 scoreDiv.id = `student-${student.number}`;
-                scoreDiv.innerText = `座號: ${student.number} | 分數: ${student.score}`;
+                scoreDiv.innerHTML = `
+                    座號: ${student.number} | 分數: ${student.score}
+                    <div class="score-control">
+                        <button onclick="adjustScore(${student.number}, 1)">加分</button>
+                        <button onclick="adjustScore(${student.number}, -1)">減分</button>
+                    </div>
+                `;
                 scoreboard.appendChild(scoreDiv);
             });
         }
 
         function downloadScores() {
             const rows = [
-                ['座號', '分數'],
+                ['座號', '得分'], // Updated header names
                 ...Array.from({ length: 35 }, (_, i) => {
                     const number = i + 1;
                     const student = students.find(s => s.number === number) || { number, score: 0 };
                     return [student.number, student.score];
                 })
             ];
-            let csvContent = "data:text/csv;charset=utf-8,"
+            let csvContent = "data:text/csv;charset=utf-8," 
                 + rows.map(e => e.join(",")).join("\n");
 
             const encodedUri = encodeURI(csvContent);
